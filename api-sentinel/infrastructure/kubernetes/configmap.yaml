@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: apisentinel-config
+  namespace: api-sentinel
+data:
+  DB_URL: jdbc:postgresql://postgres:5432/apisentinel
+  REDIS_HOST: redis
+  KAFKA_BOOTSTRAP: kafka:9092
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: apisentinel-secret
+  namespace: api-sentinel
+type: Opaque
+stringData:
+  DB_USER: apisentinel
+  DB_PASS: apisentinel
+  MCP_API_KEY: changeme

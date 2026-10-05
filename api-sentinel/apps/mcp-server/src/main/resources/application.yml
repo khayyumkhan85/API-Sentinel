@@ -1,0 +1,19 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: mcp-server
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+
+apisentinel:
+  mcp:
+    enabled: true
+    auth:
+      mode: ${MCP_AUTH_MODE:api-key}
+      apiKey: ${MCP_API_KEY:changeme}

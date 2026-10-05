@@ -1,0 +1,144 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: contract-service
+  namespace: api-sentinel
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: contract-service } }
+  template:
+    metadata:
+      labels: { app: contract-service }
+    spec:
+      containers:
+        - name: contract-service
+          image: apisentinel/contract-service:1.0.0
+          ports: [{ containerPort: 8081 }]
+          envFrom:
+            - configMapRef: { name: apisentinel-config }
+            - secretRef: { name: apisentinel-secret }
+          readinessProbe:
+            httpGet: { path: /actuator/health, port: 8081 }
+          livenessProbe:
+            httpGet: { path: /actuator/health, port: 8081 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: contract-service
+  namespace: api-sentinel
+spec:
+  ports: [{ port: 8081 }]
+  selector: { app: contract-service }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dependency-service
+  namespace: api-sentinel
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: dependency-service } }
+  template:
+    metadata:
+      labels: { app: dependency-service }
+    spec:
+      containers:
+        - name: dependency-service
+          image: apisentinel/dependency-service:1.0.0
+          ports: [{ containerPort: 8082 }]
+          envFrom:
+            - configMapRef: { name: apisentinel-config }
+            - secretRef: { name: apisentinel-secret }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dependency-service
+  namespace: api-sentinel
+spec:
+  ports: [{ port: 8082 }]
+  selector: { app: dependency-service }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analysis-service
+  namespace: api-sentinel
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: analysis-service } }
+  template:
+    metadata:
+      labels: { app: analysis-service }
+    spec:
+      containers:
+        - name: analysis-service
+          image: apisentinel/analysis-service:1.0.0
+          ports: [{ containerPort: 8083 }]
+          envFrom:
+            - configMapRef: { name: apisentinel-config }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analysis-service
+  namespace: api-sentinel
+spec:
+  ports: [{ port: 8083 }]
+  selector: { app: analysis-service }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-server
+  namespace: api-sentinel
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: mcp-server } }
+  template:
+    metadata:
+      labels: { app: mcp-server }
+    spec:
+      containers:
+        - name: mcp-server
+          image: apisentinel/mcp-server:1.0.0
+          ports: [{ containerPort: 8084 }]
+          envFrom:
+            - secretRef: { name: apisentinel-secret }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-server
+  namespace: api-sentinel
+spec:
+  ports: [{ port: 8084 }]
+  selector: { app: mcp-server }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: api-sentinel
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: api-gateway } }
+  template:
+    metadata:
+      labels: { app: api-gateway }
+    spec:
+      containers:
+        - name: api-gateway
+          image: apisentinel/api-gateway:1.0.0
+          ports: [{ containerPort: 8080 }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: api-sentinel
+spec:
+  type: LoadBalancer
+  ports: [{ port: 80, targetPort: 8080 }]
+  selector: { app: api-gateway }

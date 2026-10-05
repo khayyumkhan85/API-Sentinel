@@ -1,0 +1,31 @@
+# Security fixture - PII leak example
+openapi: 3.0.0
+info:
+  title: Customer API (insecure)
+  version: 2.0.0
+paths:
+  /customers/{id}:
+    get:
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Customer' }
+components:
+  schemas:
+    Customer:
+      type: object
+      required: [id, customerName]
+      properties:
+        id: { type: string }
+        customerName: { type: string }
+        # These should fail a security governance check:
+        ssn: { type: string, description: "social security number - sensitive" }
+        passwordHash: { type: string }
+        creditCardFull: { type: string }

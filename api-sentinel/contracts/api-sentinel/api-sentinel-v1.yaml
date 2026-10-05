@@ -1,0 +1,266 @@
+openapi: 3.0.0
+info:
+  title: API Sentinel
+  version: 1.0.0
+  description: >
+    REST surface exposed by the API Sentinel platform itself.
+    Combines contract-service, dependency-service, and analysis-service
+    behind the api-gateway.
+
+servers:
+  - url: http://localhost:8080
+    description: Local docker-compose
+  - url: https://apisentinel.example.com
+    description: Production
+
+paths:
+  /api/v1/contracts:
+    get:
+      summary: List registered API contracts
+      parameters:
+        - name: name
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ApiContract' }
+    post:
+      summary: Register a new contract version
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterContractRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiContract' }
+
+  /api/v1/contracts/{id}:
+    get:
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiContract' }
+        '404':
+          description: Not found
+
+  /api/v1/contracts/{oldId}/compare/{newId}:
+    post:
+      summary: Diff two contract versions
+      parameters:
+        - { name: oldId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: newId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: list of detected changes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ContractChange' }
+
+  /api/v1/consumers:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterConsumerRequest' }
+      responses:
+        '200':
+          description: Registered
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiConsumer' }
+
+  /api/v1/consumers/by-api/{apiName}:
+    get:
+      parameters:
+        - { name: apiName, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Consumers of the given API
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ApiConsumer' }
+
+  /api/v1/analysis/impact:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ImpactRequest' }
+      responses:
+        '200':
+          description: Impact assessment
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImpactAssessment' }
+
+  /api/v1/analysis/migration-plan:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlanRequest' }
+      responses:
+        '200':
+          description: Migration plan
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MigrationPlan' }
+
+  /mcp/tools:
+    get:
+      summary: List MCP tools exposed to AI agents
+      responses:
+        '200':
+          description: tool list
+
+  /mcp/invoke/{tool}:
+    post:
+      parameters:
+        - { name: tool, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items: {}
+      responses:
+        '200':
+          description: tool result
+
+components:
+  schemas:
+    ApiContract:
+      type: object
+      required: [id, name, version, status, specification]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        version: { type: string }
+        owner: { type: string }
+        repository: { type: string }
+        status: { type: string, enum: [ACTIVE, DEPRECATED, RETIRED, DRAFT] }
+        specification: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    RegisterContractRequest:
+      type: object
+      required: [name, version, specification]
+      properties:
+        name: { type: string }
+        version: { type: string }
+        specification: { type: string }
+        owner: { type: string }
+        repository: { type: string }
+
+    ApiConsumer:
+      type: object
+      required: [serviceName, apiName, apiVersion]
+      properties:
+        id: { type: string, format: uuid }
+        serviceName: { type: string }
+        apiName: { type: string }
+        apiVersion: { type: string }
+        contactOwner: { type: string }
+        environment: { type: string }
+
+    RegisterConsumerRequest:
+      type: object
+      required: [serviceName, apiName, apiVersion]
+      properties:
+        serviceName: { type: string }
+        apiName: { type: string }
+        apiVersion: { type: string }
+        contactOwner: { type: string }
+        environment: { type: string }
+
+    ContractChange:
+      type: object
+      required: [id, contractId, severity, breaking, changeType]
+      properties:
+        id: { type: string, format: uuid }
+        contractId: { type: string, format: uuid }
+        fromVersion: { type: string }
+        toVersion: { type: string }
+        severity: { type: string, enum: [NONE, LOW, MEDIUM, HIGH, CRITICAL] }
+        breaking: { type: boolean }
+        path: { type: string }
+        operation: { type: string }
+        changeType: { type: string }
+        description: { type: string }
+
+    ImpactRequest:
+      type: object
+      required: [changes, consumers]
+      properties:
+        changes:
+          type: array
+          items: { $ref: '#/components/schemas/ContractChange' }
+        consumers:
+          type: array
+          items: { $ref: '#/components/schemas/ApiConsumer' }
+
+    ImpactAssessment:
+      type: object
+      required: [id, changeId, riskScore]
+      properties:
+        id: { type: string, format: uuid }
+        changeId: { type: string, format: uuid }
+        riskScore: { type: integer }
+        affectedConsumers: { type: integer }
+        businessImpact: { type: string }
+        recommendation: { type: string }
+        affectedServices:
+          type: array
+          items: { type: string }
+
+    PlanRequest:
+      type: object
+      required: [contractId, apiName, currentVersion, changes, consumers]
+      properties:
+        contractId: { type: string, format: uuid }
+        apiName: { type: string }
+        currentVersion: { type: string }
+        changes:
+          type: array
+          items: { $ref: '#/components/schemas/ContractChange' }
+        consumers:
+          type: array
+          items: { type: string }
+
+    MigrationPlan:
+      type: object
+      required: [id, assessment, steps, recommendedVersion]
+      properties:
+        id: { type: string, format: uuid }
+        contractId: { type: string, format: uuid }
+        assessment: { type: string, enum: [BREAKING_CHANGE, COMPATIBLE_CHANGE] }
+        rationale: { type: string }
+        steps:
+          type: array
+          items: { type: string }
+        recommendedVersion: { type: string }
+        confidence: { type: number }

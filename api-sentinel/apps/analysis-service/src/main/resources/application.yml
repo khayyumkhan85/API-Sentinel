@@ -1,0 +1,25 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: analysis-service
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    consumer:
+      group-id: analysis-service
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+
+apisentinel:
+  ai:
+    enabled: ${AI_ENABLED:false}
+    provider: ${AI_PROVIDER:stub}
+    model: ${AI_MODEL:claude-sonnet-5-5}
